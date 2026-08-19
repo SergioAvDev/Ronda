@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>RONDA — cuentas de bar entre amigos</title>
+<meta name="theme-color" content="#1B1A17">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --charcoal:#1B1A17;
+    --charcoal-2:#242220;
+    --charcoal-3:#302D28;
+    --paper:#F3EEE1;
+    --paper-2:#EAE3D0;
+    --paper-line:#CFC6A8;
+    --ink:#2B2620;
+    --ink-soft:#6B6353;
+    --amber:#FFB238;
+    --amber-dark:#C9860F;
+    --wine:#B5443C;
+    --teal:#3E7C6B;
+    --radius:14px;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--charcoal);
+    background-image:
+      radial-gradient(circle at 20% 0%, rgba(255,178,56,0.05), transparent 40%),
+      radial-gradient(circle at 90% 90%, rgba(62,124,107,0.06), transparent 45%);
+    color:var(--paper);
+    font-family:'Inter',system-ui,sans-serif;
+    min-height:100vh;
+    padding-bottom:110px;
+  }
+  header.top{
+    padding:28px 20px 18px;
+    text-align:center;
+    position:relative;
+  }
+  header.top h1{
+    font-family:'Bebas Neue',sans-serif;
+    font-size:52px;
+    letter-spacing:4px;
+    margin:0;
+    color:var(--amber);
+    text-shadow:0 0 22px rgba(255,178,56,0.35);
+  }
+  header.top p{
+    margin:2px 0 0;
+    font-size:13px;
+    letter-spacing:1.5px;
+    text-transform:uppercase;
+    color:var(--ink-soft);
+    color:#8A8272;
+  }
+
+  .grand-total{
+    margin:0 20px 22px;
+    background:var(--charcoal-2);
+    border:1px solid var(--charcoal-3);
+    border-radius:var(--radius);
+    padding:16px 18px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+  }
+  .grand-total .label{
+    font-size:12px;
+    letter-spacing:2px;
+    text-transform:uppercase;
+    color:#8A8272;
+  }
+  .grand-total .amount{
+    font-family:'JetBrains Mono',monospace;
+    font-size:26px;
+    font-weight:700;
+    color:var(--amber);
+  }
+  .barcode{
+    height:20px;
+    margin-top:10px;
+    background-image:repeating-linear-gradient(90deg, #8A8272 0px, #8A8272 2px, transparent 2px, transparent 5px, #8A8272 5px, #8A8272 6px, transparent 6px, transparent 10px);
+    opacity:.35;
+  }
+
+  main{ padding:0 16px; max-width:520px; margin:0 auto; }
+
+  .empty-state{
+    text-align:center;
+    padding:60px 30px;
+    color:#8A8272;
+  }
+  .empty-state .glyph{ font-size:40px; margin-bottom:10px; }
+  .empty-state b{ color:var(--paper); }
+
+  .ticket{
+    background:var(--paper);
+    color:var(--ink);
+    border-radius:10px 10px 4px 4px;
+    margin-bottom:26px;
+    box-shadow:0 10px 24px rgba(0,0,0,0.35);
+    position:relative;
+    overflow:hidden;
+    animation:dropIn .35s ease;
+  }
+  @keyframes dropIn{ from{opacity:0; transform:translateY(-8px) scale(.98);} to{opacity:1; transform:none;} }
+
+  .ticket-head{
+    padding:16px 18px 10px;
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:10px;
+    border-bottom:1px dashed var(--paper-line);
+  }
+  .ticket-head .names{ min-width:0; }
+  .ticket-head h2{
+    font-family:'Bebas Neue',sans-serif;
+    font-size:26px;
+    letter-spacing:1px;
+    margin:0;
+    line-height:1.05;
+    overflow-wrap:anywhere;
+  }
+  .ticket-head .sub{
+    font-size:12.5px;
+    font-style:italic;
+    color:var(--ink-soft);
+    margin-top:2px;
+    overflow-wrap:anywhere;
+  }
+  .ticket-actions{ display:flex; gap:6px; flex-shrink:0; }
+  .icon-btn{
+    border:none;
+    background:transparent;
+    color:var(--ink-soft);
+    font-size:16px;
+    width:30px; height:30px;
+    border-radius:50%;
+    cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .icon-btn:active{ background:rgba(0,0,0,0.08); }
+  .icon-btn.danger:active{ background:rgba(181,68,60,0.15); color:var(--wine); }
+
+  .items{ padding:6px 18px 4px; }
+  .item-row{
+    display:flex;
+    align-items:baseline;
+    gap:6px;
+    padding:10px 0;
+    border-bottom:1px solid rgba(0,0,0,0.06);
+  }
+  .item-row:last-child{ border-bottom:none; }
+  .item-main{ flex:1; min-width:0; }
+  .item-title-line{
+    display:flex;
+    align-items:baseline;
+    gap:4px;
+  }
+  .item-title{
+    font-weight:600;
+    font-size:15px;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  .leader{
+    flex:1;
+    border-bottom:1px dotted #B7AE93;
+    margin:0 4px;
+    transform:translateY(-3px);
+    min-width:10px;
+  }
+  .item-price{
+    font-family:'JetBrains Mono',monospace;
+    font-weight:500;
+    font-size:15px;
+    white-space:nowrap;
+  }
+  .item-sub{
+    font-size:12px;
+    color:var(--ink-soft);
+    font-style:italic;
+    margin-top:1px;
+    overflow-wrap:anywhere;
+  }
+  .item-del{
+    border:none; background:transparent; color:#B7AE93;
+    font-size:15px; cursor:pointer; padding:4px 2px;
+    flex-shrink:0;
+  }
+  .item-del:active{ color:var(--wine); }
+
+  .add-item-btn{
+    width:100%;
+    margin:10px 0 16px;
+    padding:10px;
+    background:transparent;
+    border:1.5px dashed #B7AE93;
+    border-radius:8px;
+    color:var(--ink-soft);
+    font-family:'Inter',sans-serif;
+    font-weight:600;
+    font-size:13px;
+    letter-spacing:.5px;
+    cursor:pointer;
+  }
+  .add-item-btn:active{ background:rgba(0,0,0,0.04); }
+
+  .ticket-total{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:12px 18px 16px;
+    border-top:3px double var(--paper-line);
+    margin-top:-6px;
+  }
+  .ticket-total .t-label{
+    font-size:11px;
+    letter-spacing:2px;
+    text-transform:uppercase;
+    color:var(--ink-soft);
+  }
+  .ticket-total .t-amount{
+    font-family:'JetBrains Mono',monospace;
+    font-size:20px;
+    font-weight:700;
+    color:var(--charcoal);
+  }
+
+  .fab{
+    position:fixed;
+    right:20px; bottom:24px;
+    width:58px; height:58px;
+    border-radius:50%;
+    background:var(--amber);
+    color:var(--charcoal);
+    border:none;
+    font-size:30px;
+    line-height:58px;
+    text-align:center;
+    box-shadow:0 8px 20px rgba(255,178,56,0.4);
+    cursor:pointer;
+  }
+  .fab:active{ transform:scale(.94); }
+
+  /* modal */
+  .overlay{
+    position:fixed; inset:0;
+    background:rgba(10,9,7,0.6);
+    display:flex; align-items:flex-end;
+    z-index:50;
+    opacity:0; pointer-events:none;
+    transition:opacity .2s ease;
+  }
+  .overlay.open{ opacity:1; pointer-events:auto; }
+  .sheet{
+    background:var(--paper);
+    color:var(--ink);
+    width:100%;
+    border-radius:18px 18px 0 0;
+    padding:22px 20px calc(24px + env(safe-area-inset-bottom));
+    transform:translateY(100%);
+    transition:transform .25s ease;
+    max-height:85vh;
+    overflow-y:auto;
+  }
+  .overlay.open .sheet{ transform:translateY(0); }
+  .sheet h3{
+    font-family:'Bebas Neue',sans-serif;
+    font-size:24px;
+    letter-spacing:1px;
+    margin:0 0 14px;
+  }
+  .field{ margin-bottom:14px; }
+  .field label{
+    display:block;
+    font-size:11px;
+    letter-spacing:1.5px;
+    text-transform:uppercase;
+    color:var(--ink-soft);
+    margin-bottom:5px;
+  }
+  .field input{
+    width:100%;
+    padding:11px 12px;
+    border:1.5px solid var(--paper-line);
+    border-radius:8px;
+    background:#fff;
+    font-family:'Inter',sans-serif;
+    font-size:15px;
+    color:var(--ink);
+  }
+  .field input:focus{ outline:2px solid var(--amber-dark); border-color:transparent; }
+  .price-field{ position:relative; }
+  .price-field input{ padding-left:26px; font-family:'JetBrains Mono',monospace; }
+  .price-field::before{
+    content:'€';
+    position:absolute; left:12px; top:50%; transform:translateY(50%);
+    color:var(--ink-soft); font-family:'JetBrains Mono',monospace;
+  }
+  .sheet-actions{
+    display:flex; gap:10px; margin-top:18px;
+  }
+  .btn{
+    flex:1;
+    padding:13px;
+    border-radius:9px;
+    border:none;
+    font-weight:600;
+    font-size:14px;
+    cursor:pointer;
+    font-family:'Inter',sans-serif;
+  }
+  .btn.primary{ background:var(--amber); color:var(--charcoal); }
+  .btn.primary:active{ background:var(--amber-dark); }
+  .btn.ghost{ background:transparent; color:var(--ink-soft); border:1.5px solid var(--paper-line); }
+  .hint{ font-size:11px; color:var(--ink-soft); margin-top:-8px; margin-bottom:14px; }
+
+  ::selection{ background:var(--amber); color:var(--charcoal); }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <h1>RONDA</h1>
+  <p>cuentas de bar · entre amigos</p>
+</header>
+
+<main>
+  <div class="grand-total">
+    <div>
+      <div class="label">Total de la noche</div>
+      <div class="barcode"></div>
+    </div>
+    <div class="amount" id="grandTotal">0.00€</div>
+  </div>
+
+  <div id="groupsWrap"></div>
+
+  <div class="empty-state" id="emptyState" style="display:none">
+    <div class="glyph">🍺</div>
+    <div><b>Aún no hay rondas.</b></div>
+    <div>Toca el botón + para abrir la primera.</div>
+  </div>
+</main>
+
+<button class="fab" id="openAddGroup" aria-label="Añadir grupo">+</button>
+
+<!-- Modal grupo -->
+<div class="overlay" id="groupOverlay">
+  <div class="sheet">
+    <h3 id="groupSheetTitle">Nueva ronda</h3>
+    <div class="field">
+      <label for="groupName">Nombre</label>
+      <input id="groupName" type="text" placeholder="Ej. Terraza de Manolo" maxlength="40">
+    </div>
+    <div class="field">
+      <label for="groupSub">Subnombre</label>
+      <input id="groupSub" type="text" placeholder="Ej. sábado noche" maxlength="50">
+    </div>
+    <div class="sheet-actions">
+      <button class="btn ghost" id="cancelGroup">Cancelar</button>
+      <button class="btn primary" id="saveGroup">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal item -->
+<div class="overlay" id="itemOverlay">
+  <div class="sheet">
+    <h3 id="itemSheetTitle">Nuevo ítem</h3>
+    <div class="field">
+      <label for="itemTitle">Título</label>
+      <input id="itemTitle" type="text" placeholder="Ej. Cerveza" maxlength="40">
+    </div>
+    <div class="field">
+      <label for="itemSub">Subtítulo</label>
+      <input id="itemSub" type="text" placeholder="Ej. mediana, con limón" maxlength="50">
+    </div>
+    <div class="field price-field">
+      <label for="itemPrice">Precio</label>
+      <input id="itemPrice" type="number" inputmode="decimal" step="0.01" min="0" max="99.99" placeholder="0.00">
+    </div>
+    <div class="hint">Máximo 99,99 € (dos dígitos y dos decimales)</div>
+    <div class="sheet-actions">
+      <button class="btn ghost" id="cancelItem">Cancelar</button>
+      <button class="btn primary" id="saveItem">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const STORAGE_KEY = 'ronda_data_v1';
+
+function loadData(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(!raw) return { groups: [] };
+    return JSON.parse(raw);
+  }catch(e){ return { groups: [] }; }
+}
+function saveData(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+
+let state = loadData();
+let editingGroupId = null;   // group being edited (name/subname modal), or null when creating
+let editingItemCtx = null;   // {groupId, itemId|null} for item modal
+
+function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+
+function fmt(n){ return n.toFixed(2).replace('.', ',') + '€'; }
+
+function groupTotal(g){
+  return g.items.reduce((s,it)=> s + it.price, 0);
+}
+
+function render(){
+  const wrap = document.getElementById('groupsWrap');
+  const empty = document.getElementById('emptyState');
+  wrap.innerHTML = '';
+
+  if(state.groups.length === 0){
+    empty.style.display = 'block';
+  } else {
+    empty.style.display = 'none';
+  }
+
+  let grand = 0;
+
+  state.groups.forEach(g=>{
+    const total = groupTotal(g);
+    grand += total;
+
+    const ticket = document.createElement('div');
+    ticket.className = 'ticket';
+
+    ticket.innerHTML = `
+      <div class="ticket-head">
+        <div class="names">
+          <h2>${escapeHtml(g.name)}</h2>
+          <div class="sub">${escapeHtml(g.subname || '')}</div>
+        </div>
+        <div class="ticket-actions">
+          <button class="icon-btn" data-action="edit-group" data-id="${g.id}" aria-label="Editar grupo">✎</button>
+          <button class="icon-btn danger" data-action="del-group" data-id="${g.id}" aria-label="Eliminar grupo">✕</button>
+        </div>
+      </div>
+      <div class="items">
+        ${g.items.map(it => `
+          <div class="item-row">
+            <div class="item-main">
+              <div class="item-title-line">
+                <span class="item-title">${escapeHtml(it.title)}</span>
+                <span class="leader"></span>
+                <span class="item-price">${fmt(it.price)}</span>
+              </div>
+              ${it.subtitle ? `<div class="item-sub">${escapeHtml(it.subtitle)}</div>` : ''}
+            </div>
+            <button class="item-del" data-action="del-item" data-gid="${g.id}" data-iid="${it.id}" aria-label="Eliminar ítem">✕</button>
+          </div>
+        `).join('')}
+      </div>
+      <button class="add-item-btn" data-action="add-item" data-gid="${g.id}">+ Añadir ítem</button>
+      <div class="ticket-total">
+        <div class="t-label">Total ronda</div>
+        <div class="t-amount">${fmt(total)}</div>
+      </div>
+    `;
+
+    // tap on item to edit
+    ticket.querySelectorAll('.item-row').forEach((row, idx)=>{
+      row.addEventListener('click', (e)=>{
+        if(e.target.closest('[data-action="del-item"]')) return;
+        openItemModal(g.id, g.items[idx].id);
+      });
+    });
+
+    wrap.appendChild(ticket);
+  });
+
+  document.getElementById('grandTotal').textContent = fmt(grand);
+}
+
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, c => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[c]));
+}
+
+// event delegation for dynamic buttons
+document.getElementById('groupsWrap').addEventListener('click', (e)=>{
+  const btn = e.target.closest('[data-action]');
+  if(!btn) return;
+  const action = btn.dataset.action;
+
+  if(action === 'edit-group'){
+    openGroupModal(btn.dataset.id);
+  } else if(action === 'del-group'){
+    const g = state.groups.find(x=>x.id===btn.dataset.id);
+    if(g && confirm(`¿Eliminar "${g.name}" y sus ${g.items.length} ítems?`)){
+      state.groups = state.groups.filter(x=>x.id!==btn.dataset.id);
+      saveData(); render();
+    }
+  } else if(action === 'add-item'){
+    openItemModal(btn.dataset.gid, null);
+  } else if(action === 'del-item'){
+    const g = state.groups.find(x=>x.id===btn.dataset.gid);
+    if(g){
+      const it = g.items.find(x=>x.id===btn.dataset.iid);
+      if(it && confirm(`¿Eliminar "${it.title}"?`)){
+        g.items = g.items.filter(x=>x.id!==btn.dataset.iid);
+        saveData(); render();
+      }
+    }
+  }
+});
+
+// ---- Group modal ----
+const groupOverlay = document.getElementById('groupOverlay');
+document.getElementById('openAddGroup').addEventListener('click', ()=> openGroupModal(null));
+document.getElementById('cancelGroup').addEventListener('click', closeGroupModal);
+groupOverlay.addEventListener('click', (e)=>{ if(e.target === groupOverlay) closeGroupModal(); });
+
+function openGroupModal(id){
+  editingGroupId = id;
+  const title = document.getElementById('groupSheetTitle');
+  const nameEl = document.getElementById('groupName');
+  const subEl = document.getElementById('groupSub');
+  if(id){
+    const g = state.groups.find(x=>x.id===id);
+    title.textContent = 'Editar ronda';
+    nameEl.value = g.name;
+    subEl.value = g.subname || '';
+  } else {
+    title.textContent = 'Nueva ronda';
+    nameEl.value = '';
+    subEl.value = '';
+  }
+  groupOverlay.classList.add('open');
+  setTimeout(()=>nameEl.focus(), 250);
+}
+function closeGroupModal(){ groupOverlay.classList.remove('open'); }
+
+document.getElementById('saveGroup').addEventListener('click', ()=>{
+  const name = document.getElementById('groupName').value.trim();
+  const subname = document.getElementById('groupSub').value.trim();
+  if(!name){ document.getElementById('groupName').focus(); return; }
+
+  if(editingGroupId){
+    const g = state.groups.find(x=>x.id===editingGroupId);
+    g.name = name; g.subname = subname;
+  } else {
+    state.groups.push({ id: uid(), name, subname, items: [] });
+  }
+  saveData(); render(); closeGroupModal();
+});
+
+// ---- Item modal ----
+const itemOverlay = document.getElementById('itemOverlay');
+document.getElementById('cancelItem').addEventListener('click', closeItemModal);
+itemOverlay.addEventListener('click', (e)=>{ if(e.target === itemOverlay) closeItemModal(); });
+
+function openItemModal(groupId, itemId){
+  editingItemCtx = { groupId, itemId };
+  const title = document.getElementById('itemSheetTitle');
+  const titleEl = document.getElementById('itemTitle');
+  const subEl = document.getElementById('itemSub');
+  const priceEl = document.getElementById('itemPrice');
+
+  if(itemId){
+    const g = state.groups.find(x=>x.id===groupId);
+    const it = g.items.find(x=>x.id===itemId);
+    title.textContent = 'Editar ítem';
+    titleEl.value = it.title;
+    subEl.value = it.subtitle || '';
+    priceEl.value = it.price.toFixed(2);
+  } else {
+    title.textContent = 'Nuevo ítem';
+    titleEl.value = ''; subEl.value = ''; priceEl.value = '';
+  }
+  itemOverlay.classList.add('open');
+  setTimeout(()=>titleEl.focus(), 250);
+}
+function closeItemModal(){ itemOverlay.classList.remove('open'); }
+
+document.getElementById('saveItem').addEventListener('click', ()=>{
+  const titleEl = document.getElementById('itemTitle');
+  const subEl = document.getElementById('itemSub');
+  const priceEl = document.getElementById('itemPrice');
+
+  const t = titleEl.value.trim();
+  let price = parseFloat(priceEl.value);
+  if(!t){ titleEl.focus(); return; }
+  if(isNaN(price) || price < 0){ priceEl.focus(); return; }
+  if(price > 99.99) price = 99.99;
+  price = Math.round(price * 100) / 100;
+
+  const { groupId, itemId } = editingItemCtx;
+  const g = state.groups.find(x=>x.id===groupId);
+
+  if(itemId){
+    const it = g.items.find(x=>x.id===itemId);
+    it.title = t; it.subtitle = subEl.value.trim(); it.price = price;
+  } else {
+    g.items.push({ id: uid(), title: t, subtitle: subEl.value.trim(), price });
+  }
+  saveData(); render(); closeItemModal();
+});
+
+render();
+
+// PWA service worker
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('sw.js').catch(()=>{});
+  });
+}
+</script>
+</body>
+</html>
