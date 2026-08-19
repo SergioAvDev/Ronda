@@ -202,6 +202,40 @@
   }
   .item-del:active{ color:var(--wine); }
 
+  .qty-stepper{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    margin-top:5px;
+  }
+  .qty-btn{
+    width:23px; height:23px;
+    border-radius:50%;
+    border:1px solid var(--paper-line);
+    background:transparent;
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    font-size:15px;
+    line-height:1;
+    cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    flex-shrink:0;
+  }
+  .qty-btn:active{ background:rgba(0,0,0,0.08); }
+  .qty-btn:disabled{ opacity:.35; }
+  .qty-value{
+    font-family:'JetBrains Mono',monospace;
+    font-size:13px;
+    min-width:16px;
+    text-align:center;
+  }
+  .unit-price{
+    font-family:'JetBrains Mono',monospace;
+    font-size:11px;
+    color:var(--ink-soft);
+    margin-left:2px;
+  }
+
   .add-item-btn{
     width:100%;
     margin:10px 0 16px;
@@ -422,7 +456,7 @@ function uid(){ return Date.now().toString(36) + Math.random().toString(36).slic
 function fmt(n){ return n.toFixed(2).replace('.', ',') + '€'; }
 
 function groupTotal(g){
-  return g.items.reduce((s,it)=> s + it.price, 0);
+  return g.items.reduce((s,it)=> s + it.price * (it.qty || 1), 0);
 }
 
 function render(){
@@ -457,19 +491,25 @@ function render(){
         </div>
       </div>
       <div class="items">
-        ${g.items.map(it => `
+        ${g.items.map(it => { const qty = it.qty || 1; return `
           <div class="item-row">
             <div class="item-main">
               <div class="item-title-line">
                 <span class="item-title">${escapeHtml(it.title)}</span>
                 <span class="leader"></span>
-                <span class="item-price">${fmt(it.price)}</span>
+                <span class="item-price">${fmt(it.price * qty)}</span>
               </div>
               ${it.subtitle ? `<div class="item-sub">${escapeHtml(it.subtitle)}</div>` : ''}
+              <div class="qty-stepper">
+                <button class="qty-btn" data-action="qty-dec" data-gid="${g.id}" data-iid="${it.id}" ${qty<=1?'disabled':''} aria-label="Quitar unidad">−</button>
+                <span class="qty-value">${qty}</span>
+                <button class="qty-btn" data-action="qty-inc" data-gid="${g.id}" data-iid="${it.id}" aria-label="Añadir unidad">+</button>
+                <span class="unit-price">× ${fmt(it.price)}/u</span>
+              </div>
             </div>
             <button class="item-del" data-action="del-item" data-gid="${g.id}" data-iid="${it.id}" aria-label="Eliminar ítem">✕</button>
           </div>
-        `).join('')}
+        `; }).join('')}
       </div>
       <button class="add-item-btn" data-action="add-item" data-gid="${g.id}">+ Añadir ítem</button>
       <div class="ticket-total">
@@ -478,10 +518,10 @@ function render(){
       </div>
     `;
 
-    // tap on item to edit
+    // tap on item (but not on qty buttons or delete) to edit
     ticket.querySelectorAll('.item-row').forEach((row, idx)=>{
       row.addEventListener('click', (e)=>{
-        if(e.target.closest('[data-action="del-item"]')) return;
+        if(e.target.closest('[data-action]')) return;
         openItemModal(g.id, g.items[idx].id);
       });
     });
@@ -514,6 +554,14 @@ document.getElementById('groupsWrap').addEventListener('click', (e)=>{
     }
   } else if(action === 'add-item'){
     openItemModal(btn.dataset.gid, null);
+  } else if(action === 'qty-inc' || action === 'qty-dec'){
+    const g = state.groups.find(x=>x.id===btn.dataset.gid);
+    const it = g && g.items.find(x=>x.id===btn.dataset.iid);
+    if(it){
+      it.qty = (it.qty || 1) + (action === 'qty-inc' ? 1 : -1);
+      if(it.qty < 1) it.qty = 1;
+      saveData(); render();
+    }
   } else if(action === 'del-item'){
     const g = state.groups.find(x=>x.id===btn.dataset.gid);
     if(g){
@@ -613,7 +661,7 @@ document.getElementById('saveItem').addEventListener('click', ()=>{
     const it = g.items.find(x=>x.id===itemId);
     it.title = t; it.subtitle = subEl.value.trim(); it.price = price;
   } else {
-    g.items.push({ id: uid(), title: t, subtitle: subEl.value.trim(), price });
+    g.items.push({ id: uid(), title: t, subtitle: subEl.value.trim(), price, qty: 1 });
   }
   saveData(); render(); closeItemModal();
 });
