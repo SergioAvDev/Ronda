@@ -326,16 +326,13 @@
 
     <div id="rondaItemFields" style="display:none">
       <div class="field">
-        <label for="itemQtyRonda">Cantidad total</label>
-        <input id="itemQtyRonda" type="number" inputmode="numeric" min="1" max="999" value="1">
-      </div>
-      <div class="field">
         <label>¿Quién se lo bebe? <button type="button" id="allMembersBtn" class="btn ghost" style="flex:none;padding:5px 12px;font-size:11px;margin-left:6px">Todos</button></label>
         <div class="chips" id="itemMemberChips"></div>
+        <div class="hint" style="margin-top:8px">Toca a cada compinche que se apunta — el total sube solo.</div>
       </div>
       <div class="alloc-box" id="allocBox" style="display:none">
         <div id="allocRows"></div>
-        <div class="alloc-hint" id="allocHint"></div>
+        <div class="alloc-hint ok" id="allocHint"></div>
       </div>
     </div>
 
@@ -690,21 +687,12 @@ const itemMemberChips = document.getElementById('itemMemberChips');
 const allocBox = document.getElementById('allocBox');
 const allocRows = document.getElementById('allocRows');
 const allocHint = document.getElementById('allocHint');
-const itemQtyRonda = document.getElementById('itemQtyRonda');
 
 document.getElementById('cancelItem').addEventListener('click', closeItemModal);
 itemOverlay.addEventListener('click', (e)=>{ if(e.target === itemOverlay) closeItemModal(); });
 
-function autoDistribute(qty, ids){
-  const n = ids.length;
-  itemUnitCounts = {};
-  if(n === 0) return;
-  const base = Math.floor(qty / n);
-  let rem = qty % n;
-  ids.forEach(id=>{
-    itemUnitCounts[id] = base + (rem > 0 ? 1 : 0);
-    if(rem > 0) rem--;
-  });
+function currentTotalQty(){
+  return Object.values(itemUnitCounts).reduce((s,v)=>s+v,0);
 }
 
 function renderItemMemberChips(g){
@@ -714,9 +702,13 @@ function renderItemMemberChips(g){
   itemMemberChips.querySelectorAll('.chip').forEach(chip=>{
     chip.addEventListener('click', ()=>{
       const mid = chip.dataset.mid;
-      if(itemSelectedMembers.has(mid)) itemSelectedMembers.delete(mid);
-      else itemSelectedMembers.add(mid);
-      autoDistribute(parseInt(itemQtyRonda.value)||1, Array.from(itemSelectedMembers));
+      if(itemSelectedMembers.has(mid)){
+        itemSelectedMembers.delete(mid);
+        delete itemUnitCounts[mid];
+      } else {
+        itemSelectedMembers.add(mid);
+        itemUnitCounts[mid] = 1; // cada toque añade 1 unidad, el total sube solo
+      }
       renderItemMemberChips(g);
       renderAllocRows(g);
     });
@@ -730,38 +722,30 @@ function renderAllocRows(g){
   allocRows.innerHTML = ids.map(id => `
     <div class="alloc-row">
       <span class="aname">${escapeHtml(memberName(g,id) || '¿?')}</span>
-      <input type="number" min="0" inputmode="numeric" data-alloc="${id}" value="${itemUnitCounts[id]||0}">
+      <input type="number" min="1" inputmode="numeric" data-alloc="${id}" value="${itemUnitCounts[id]||1}">
     </div>
   `).join('');
   allocRows.querySelectorAll('[data-alloc]').forEach(inp=>{
     inp.addEventListener('input', ()=>{
-      itemUnitCounts[inp.dataset.alloc] = parseInt(inp.value)||0;
+      const v = Math.max(1, parseInt(inp.value)||1);
+      itemUnitCounts[inp.dataset.alloc] = v;
       updateAllocHint();
     });
   });
   updateAllocHint();
 }
 function updateAllocHint(){
-  const qty = parseInt(itemQtyRonda.value)||0;
-  const sum = Object.values(itemUnitCounts).reduce((s,v)=>s+v,0);
-  if(sum === qty){
-    allocHint.textContent = `Asignadas ${sum} de ${qty} ✓`;
-    allocHint.className = 'alloc-hint ok';
-  } else {
-    allocHint.textContent = `Asignadas ${sum} de ${qty} — deben sumar el total`;
-    allocHint.className = 'alloc-hint warn';
-  }
+  allocHint.textContent = `Cantidad total: ${currentTotalQty()} 🍻`;
 }
 document.getElementById('allMembersBtn').addEventListener('click', ()=>{
   const g = state.groups.find(x=>x.id===editingItemCtx.groupId);
-  itemSelectedMembers = new Set(g.members.map(m=>m.id));
-  autoDistribute(parseInt(itemQtyRonda.value)||1, Array.from(itemSelectedMembers));
+  g.members.forEach(m=>{
+    if(!itemSelectedMembers.has(m.id)){
+      itemSelectedMembers.add(m.id);
+      itemUnitCounts[m.id] = 1;
+    }
+  });
   renderItemMemberChips(g);
-  renderAllocRows(g);
-});
-itemQtyRonda.addEventListener('input', ()=>{
-  const g = state.groups.find(x=>x.id===editingItemCtx.groupId);
-  autoDistribute(parseInt(itemQtyRonda.value)||1, Array.from(itemSelectedMembers));
   renderAllocRows(g);
 });
 
@@ -783,7 +767,6 @@ function openItemModal(groupId, itemId){
     subEl.value = it.subtitle || '';
     priceEl.value = it.price.toFixed(2);
     if(isRonda){
-      itemQtyRonda.value = it.qty || 1;
       itemUnitCounts = {};
       (it.assignments||[]).forEach(mid=>{ if(mid) itemUnitCounts[mid] = (itemUnitCounts[mid]||0)+1; });
       itemSelectedMembers = new Set(Object.keys(itemUnitCounts));
@@ -792,7 +775,6 @@ function openItemModal(groupId, itemId){
     title.textContent = 'Nuevo ítem';
     titleEl.value = ''; subEl.value = ''; priceEl.value = '';
     if(isRonda){
-      itemQtyRonda.value = 1;
       itemSelectedMembers = new Set();
       itemUnitCounts = {};
     }
@@ -824,11 +806,9 @@ document.getElementById('saveItem').addEventListener('click', ()=>{
 
   let qty = 1, assignments = null;
   if(isRonda){
-    qty = parseInt(itemQtyRonda.value) || 1;
-    if(qty < 1) qty = 1;
-    const sum = Object.values(itemUnitCounts).reduce((s,v)=>s+v,0);
-    if(sum !== qty){
-      alert(`Las unidades asignadas (${sum}) deben sumar el total (${qty}).`);
+    qty = currentTotalQty();
+    if(qty < 1){
+      alert('Toca al menos a un compinche que se lo bebe.');
       return;
     }
     assignments = [];
