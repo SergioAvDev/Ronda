@@ -1,4 +1,4 @@
-const CACHE = 'ronda-v4';
+const CACHE = 'ronda-v5';
 const ASSETS = [
   './index.html',
   './manifest.json',

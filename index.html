@@ -106,6 +106,9 @@
   .item-sub{ font-size:12px; color:var(--ink-soft); font-style:italic; margin-top:1px; overflow-wrap:anywhere; }
   .item-del{ border:none; background:transparent; color:#B7AE93; font-size:15px; cursor:pointer; padding:4px 2px; flex-shrink:0; }
   .item-del:active{ color:var(--wine); }
+  .item-actions-col{ display:flex; flex-direction:column; align-items:center; gap:2px; flex-shrink:0; }
+  .quick-round-btn{ border:none; background:transparent; color:var(--teal); font-size:16px; cursor:pointer; padding:4px 2px; }
+  .quick-round-btn:active{ color:var(--amber-dark); }
 
   .qty-stepper{ display:flex; align-items:center; gap:8px; margin-top:5px; }
   .qty-btn{
@@ -343,6 +346,32 @@
   </div>
 </div>
 
+<!-- Modal ronda rápida -->
+<div class="overlay" id="quickRoundOverlay">
+  <div class="sheet">
+    <div class="sheet-header-row">
+      <h3 id="quickRoundTitle">Otra ronda</h3>
+      <button class="icon-btn" id="closeQuickRoundX" aria-label="Cerrar">✕</button>
+    </div>
+    <div class="field">
+      <label>¿Quién repite? <button type="button" id="quickAllMembersBtn" class="btn ghost" style="flex:none;padding:5px 12px;font-size:11px;margin-left:6px">Todos</button></label>
+      <div class="chips" id="quickRoundChips"></div>
+    </div>
+    <div class="field" style="max-width:160px">
+      <label for="quickRoundEach">Unidades cada uno</label>
+      <div style="display:flex;align-items:center;gap:10px">
+        <button type="button" class="qty-btn" id="quickEachDec">−</button>
+        <input id="quickRoundEach" type="number" min="1" value="1" style="text-align:center">
+        <button type="button" class="qty-btn" id="quickEachInc">+</button>
+      </div>
+    </div>
+    <div class="sheet-actions">
+      <button class="btn ghost" id="cancelQuickRound">Cancelar</button>
+      <button class="btn primary" id="confirmQuickRound">Añadir ronda</button>
+    </div>
+  </div>
+</div>
+
 <!-- Modal reparto -->
 <div class="overlay" id="breakdownOverlay">
   <div class="sheet">
@@ -440,7 +469,10 @@ function render(){
               ${it.subtitle ? `<div class="item-sub">${escapeHtml(it.subtitle)}</div>` : ''}
               <div class="assign-summary">${parts.join(' · ')} · ${fmt(it.price)}/u</div>
             </div>
-            <button class="item-del" data-action="del-item" data-gid="${g.id}" data-iid="${it.id}" aria-label="Eliminar ítem">✕</button>
+            <div class="item-actions-col">
+              <button class="quick-round-btn" data-action="quick-round" data-gid="${g.id}" data-iid="${it.id}" aria-label="Otra ronda de este ítem">🔁</button>
+              <button class="item-del" data-action="del-item" data-gid="${g.id}" data-iid="${it.id}" aria-label="Eliminar ítem">✕</button>
+            </div>
           </div>`;
       } else {
         return `
@@ -532,6 +564,8 @@ document.getElementById('groupsWrap').addEventListener('click', (e)=>{
     }
   } else if(action === 'split'){
     openBreakdown(btn.dataset.gid);
+  } else if(action === 'quick-round'){
+    openQuickRound(btn.dataset.gid, btn.dataset.iid);
   }
 });
 
@@ -813,6 +847,72 @@ document.getElementById('saveItem').addEventListener('click', ()=>{
     g.items.push(newItem);
   }
   saveData(); render(); closeItemModal();
+});
+
+// ==================== RONDA RÁPIDA (🔁) ====================
+const quickRoundOverlay = document.getElementById('quickRoundOverlay');
+const quickRoundChips = document.getElementById('quickRoundChips');
+const quickRoundEach = document.getElementById('quickRoundEach');
+let quickRoundCtx = null; // {groupId, itemId}
+let quickSelectedMembers = new Set();
+
+function renderQuickChips(g){
+  quickRoundChips.innerHTML = g.members.map(m => `
+    <span class="chip ${quickSelectedMembers.has(m.id) ? 'selected' : ''}" data-mid="${m.id}">${escapeHtml(m.name)}</span>
+  `).join('');
+  quickRoundChips.querySelectorAll('.chip').forEach(chip=>{
+    chip.addEventListener('click', ()=>{
+      const mid = chip.dataset.mid;
+      if(quickSelectedMembers.has(mid)) quickSelectedMembers.delete(mid);
+      else quickSelectedMembers.add(mid);
+      renderQuickChips(g);
+    });
+  });
+}
+
+function openQuickRound(groupId, itemId){
+  const g = state.groups.find(x=>x.id===groupId);
+  const it = g.items.find(x=>x.id===itemId);
+  quickRoundCtx = { groupId, itemId };
+  document.getElementById('quickRoundTitle').textContent = `Otra ronda de ${it.title}`;
+  // premarca a quien ya bebía este ítem, para no tener que volver a tocarlos
+  quickSelectedMembers = new Set((it.assignments || []).filter(Boolean));
+  quickRoundEach.value = 1;
+  renderQuickChips(g);
+  quickRoundOverlay.classList.add('open');
+}
+function closeQuickRound(){ quickRoundOverlay.classList.remove('open'); }
+
+document.getElementById('closeQuickRoundX').addEventListener('click', closeQuickRound);
+document.getElementById('cancelQuickRound').addEventListener('click', closeQuickRound);
+quickRoundOverlay.addEventListener('click', (e)=>{ if(e.target === quickRoundOverlay) closeQuickRound(); });
+
+document.getElementById('quickAllMembersBtn').addEventListener('click', ()=>{
+  const g = state.groups.find(x=>x.id===quickRoundCtx.groupId);
+  quickSelectedMembers = new Set(g.members.map(m=>m.id));
+  renderQuickChips(g);
+});
+document.getElementById('quickEachDec').addEventListener('click', ()=>{
+  quickRoundEach.value = Math.max(1, (parseInt(quickRoundEach.value)||1) - 1);
+});
+document.getElementById('quickEachInc').addEventListener('click', ()=>{
+  quickRoundEach.value = (parseInt(quickRoundEach.value)||1) + 1;
+});
+
+document.getElementById('confirmQuickRound').addEventListener('click', ()=>{
+  if(quickSelectedMembers.size === 0){
+    alert('Toca al menos a un compinche.');
+    return;
+  }
+  const g = state.groups.find(x=>x.id===quickRoundCtx.groupId);
+  const it = g.items.find(x=>x.id===quickRoundCtx.itemId);
+  const each = Math.max(1, parseInt(quickRoundEach.value)||1);
+  if(!it.assignments) it.assignments = new Array(it.qty || 0).fill(null);
+  quickSelectedMembers.forEach(mid=>{
+    for(let i=0;i<each;i++) it.assignments.push(mid);
+  });
+  it.qty = it.assignments.length;
+  saveData(); render(); closeQuickRound();
 });
 
 // ==================== REPARTO "¿Cuánto por cabeza?" ====================
