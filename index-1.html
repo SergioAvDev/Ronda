@@ -1,0 +1,1008 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>RONDA — cuentas de bar entre amigos</title>
+<meta name="theme-color" content="#1B1A17">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --charcoal:#1B1A17;
+    --charcoal-2:#242220;
+    --charcoal-3:#302D28;
+    --paper:#F3EEE1;
+    --paper-2:#EAE3D0;
+    --paper-line:#CFC6A8;
+    --ink:#2B2620;
+    --ink-soft:#6B6353;
+    --amber:#FFB238;
+    --amber-dark:#C9860F;
+    --wine:#B5443C;
+    --teal:#3E7C6B;
+    --radius:14px;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--charcoal);
+    background-image:
+      radial-gradient(circle at 20% 0%, rgba(255,178,56,0.05), transparent 40%),
+      radial-gradient(circle at 90% 90%, rgba(62,124,107,0.06), transparent 45%);
+    color:var(--paper);
+    font-family:'Inter',system-ui,sans-serif;
+    min-height:100vh;
+    padding-bottom:110px;
+  }
+  header.top{ padding:28px 20px 18px; text-align:center; position:relative; }
+  header.top h1{
+    font-family:'Bebas Neue',sans-serif; font-size:52px; letter-spacing:4px; margin:0;
+    color:var(--amber); text-shadow:0 0 22px rgba(255,178,56,0.35);
+  }
+  header.top p{ margin:2px 0 0; font-size:13px; letter-spacing:1.5px; text-transform:uppercase; color:#8A8272; }
+
+  .grand-total{
+    margin:0 20px 22px; background:var(--charcoal-2); border:1px solid var(--charcoal-3);
+    border-radius:var(--radius); padding:16px 18px; display:flex; align-items:center; justify-content:space-between;
+  }
+  .grand-total .label{ font-size:12px; letter-spacing:2px; text-transform:uppercase; color:#8A8272; }
+  .grand-total .amount{ font-family:'JetBrains Mono',monospace; font-size:26px; font-weight:700; color:var(--amber); }
+  .barcode{
+    height:20px; margin-top:10px;
+    background-image:repeating-linear-gradient(90deg, #8A8272 0px, #8A8272 2px, transparent 2px, transparent 5px, #8A8272 5px, #8A8272 6px, transparent 6px, transparent 10px);
+    opacity:.35;
+  }
+
+  main{ padding:0 16px; max-width:520px; margin:0 auto; }
+
+  .empty-state{ text-align:center; padding:60px 30px; color:#8A8272; }
+  .empty-state .glyph{ font-size:40px; margin-bottom:10px; }
+  .empty-state b{ color:var(--paper); }
+
+  .ticket{
+    background:var(--paper); color:var(--ink); border-radius:10px 10px 4px 4px; margin-bottom:26px;
+    box-shadow:0 10px 24px rgba(0,0,0,0.35); position:relative; overflow:hidden; animation:dropIn .35s ease;
+  }
+  @keyframes dropIn{ from{opacity:0; transform:translateY(-8px) scale(.98);} to{opacity:1; transform:none;} }
+
+  .ticket-head{
+    padding:16px 18px 10px; display:flex; justify-content:space-between; align-items:flex-start; gap:10px;
+    border-bottom:1px dashed var(--paper-line);
+  }
+  .ticket-head .names{ min-width:0; }
+  .ticket-head h2{
+    font-family:'Bebas Neue',sans-serif; font-size:26px; letter-spacing:1px; margin:0; line-height:1.05;
+    overflow-wrap:anywhere; display:inline;
+  }
+  .mode-pill{
+    font-size:9px; letter-spacing:1px; text-transform:uppercase; background:var(--charcoal); color:var(--amber);
+    padding:3px 8px; border-radius:20px; margin-left:7px; vertical-align:middle; font-family:'Inter',sans-serif; font-weight:700;
+  }
+  .ticket-head .sub{ font-size:12.5px; font-style:italic; color:var(--ink-soft); margin-top:2px; overflow-wrap:anywhere; }
+  .ticket-actions{ display:flex; gap:6px; flex-shrink:0; }
+  .icon-btn{
+    border:none; background:transparent; color:var(--ink-soft); font-size:16px; width:30px; height:30px;
+    border-radius:50%; cursor:pointer; display:flex; align-items:center; justify-content:center;
+  }
+  .icon-btn:active{ background:rgba(0,0,0,0.08); }
+  .icon-btn.danger:active{ background:rgba(181,68,60,0.15); color:var(--wine); }
+
+  .items{ padding:6px 18px 4px; }
+  .item-row{ display:flex; align-items:baseline; gap:6px; padding:10px 0; border-bottom:1px solid rgba(0,0,0,0.06); }
+  .item-row:last-child{ border-bottom:none; }
+  .item-main{ flex:1; min-width:0; }
+  .item-title-line{ display:flex; align-items:baseline; gap:4px; }
+  .item-title{ font-weight:600; font-size:15px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .leader{ flex:1; border-bottom:1px dotted #B7AE93; margin:0 4px; transform:translateY(-3px); min-width:10px; }
+  .item-price{ font-family:'JetBrains Mono',monospace; font-weight:500; font-size:15px; white-space:nowrap; }
+  .item-sub{ font-size:12px; color:var(--ink-soft); font-style:italic; margin-top:1px; overflow-wrap:anywhere; }
+  .item-del{ border:none; background:transparent; color:#B7AE93; font-size:15px; cursor:pointer; padding:4px 2px; flex-shrink:0; }
+  .item-del:active{ color:var(--wine); }
+  .item-actions-col{ display:flex; flex-direction:column; align-items:center; gap:2px; flex-shrink:0; }
+  .quick-round-btn{ border:none; background:transparent; color:var(--teal); font-size:16px; cursor:pointer; padding:4px 2px; }
+  .quick-round-btn:active{ color:var(--amber-dark); }
+
+  .qty-stepper{ display:flex; align-items:center; gap:8px; margin-top:5px; }
+  .qty-btn{
+    width:23px; height:23px; border-radius:50%; border:1px solid var(--paper-line); background:transparent; color:var(--ink);
+    font-family:'Inter',sans-serif; font-size:15px; line-height:1; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  }
+  .qty-btn:active{ background:rgba(0,0,0,0.08); }
+  .qty-btn:disabled{ opacity:.35; }
+  .qty-value{ font-family:'JetBrains Mono',monospace; font-size:13px; min-width:16px; text-align:center; }
+  .unit-price{ font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--ink-soft); margin-left:2px; }
+  .assign-summary{ font-size:11px; color:var(--ink-soft); font-family:'JetBrains Mono',monospace; margin-top:5px; overflow-wrap:anywhere; }
+
+  .add-item-btn{
+    display:block; margin:10px 18px 12px; padding:10px; background:transparent; border:1.5px dashed #B7AE93; border-radius:8px;
+    color:var(--ink-soft); font-family:'Inter',sans-serif; font-weight:600; font-size:13px; letter-spacing:.5px; cursor:pointer;
+  }
+  .add-item-btn:active{ background:rgba(0,0,0,0.04); }
+
+  .split-btn{
+    display:block; margin:0 18px 16px; padding:10px; background:transparent; border:1.5px dashed var(--teal); border-radius:8px;
+    color:var(--teal); font-family:'Inter',sans-serif; font-weight:700; font-size:13px; letter-spacing:.3px; cursor:pointer;
+  }
+  .split-btn:active{ background:rgba(62,124,107,0.08); }
+  .sheet-header-row{ display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; }
+  .sheet-header-row h3{ margin:0; }
+
+  .ticket-total{
+    display:flex; justify-content:space-between; align-items:center; padding:12px 18px 16px;
+    border-top:3px double var(--paper-line); margin-top:-6px;
+  }
+  .ticket-total .t-label{ font-size:11px; letter-spacing:2px; text-transform:uppercase; color:var(--ink-soft); }
+  .ticket-total .t-amount{ font-family:'JetBrains Mono',monospace; font-size:20px; font-weight:700; color:var(--charcoal); }
+
+  .fab{
+    position:fixed; right:20px; bottom:24px; width:58px; height:58px; border-radius:50%; background:var(--amber);
+    color:var(--charcoal); border:none; font-size:30px; line-height:58px; text-align:center;
+    box-shadow:0 8px 20px rgba(255,178,56,0.4); cursor:pointer;
+  }
+  .fab:active{ transform:scale(.94); }
+
+  .overlay{
+    position:fixed; inset:0; background:rgba(10,9,7,0.6); display:flex; align-items:flex-end; z-index:50;
+    opacity:0; pointer-events:none; transition:opacity .2s ease;
+  }
+  .overlay.open{ opacity:1; pointer-events:auto; }
+  .sheet{
+    background:var(--paper); color:var(--ink); width:100%; border-radius:18px 18px 0 0;
+    padding:22px 20px calc(24px + env(safe-area-inset-bottom)); transform:translateY(100%);
+    transition:transform .25s ease; max-height:85vh; overflow-y:auto;
+  }
+  .overlay.open .sheet{ transform:translateY(0); }
+  .sheet h3{ font-family:'Bebas Neue',sans-serif; font-size:24px; letter-spacing:1px; margin:0 0 14px; }
+  .field{ margin-bottom:14px; }
+  .field label{
+    display:block; font-size:11px; letter-spacing:1.5px; text-transform:uppercase; color:var(--ink-soft); margin-bottom:5px;
+  }
+  .field input{
+    width:100%; padding:11px 12px; border:1.5px solid var(--paper-line); border-radius:8px; background:#fff;
+    font-family:'Inter',sans-serif; font-size:15px; color:var(--ink);
+  }
+  .field input:focus{ outline:2px solid var(--amber-dark); border-color:transparent; }
+  .price-field{ position:relative; }
+  .price-field input{ padding-left:26px; font-family:'JetBrains Mono',monospace; }
+  .price-field::before{
+    content:'€'; position:absolute; left:12px; top:50%; transform:translateY(50%);
+    color:var(--ink-soft); font-family:'JetBrains Mono',monospace;
+  }
+  .sheet-actions{ display:flex; gap:10px; margin-top:18px; }
+  .btn{ flex:1; padding:13px; border-radius:9px; border:none; font-weight:600; font-size:14px; cursor:pointer; font-family:'Inter',sans-serif; }
+  .btn.primary{ background:var(--amber); color:var(--charcoal); }
+  .btn.primary:active{ background:var(--amber-dark); }
+  .btn.ghost{ background:transparent; color:var(--ink-soft); border:1.5px solid var(--paper-line); }
+  .hint{ font-size:11px; color:var(--ink-soft); margin-top:-8px; margin-bottom:14px; }
+
+  .mode-toggle{ display:flex; gap:8px; margin-bottom:16px; }
+  .mode-btn{
+    flex:1; padding:13px 8px; border-radius:9px; border:1.5px solid var(--paper-line); background:transparent;
+    color:var(--ink); font-weight:700; font-size:13px; cursor:pointer; font-family:'Inter',sans-serif; text-align:center;
+  }
+  .mode-btn .sub{ display:block; font-weight:400; font-size:10.5px; color:var(--ink-soft); margin-top:2px; font-style:normal; }
+  .mode-btn.active{ background:var(--charcoal); color:var(--amber); border-color:var(--charcoal); }
+  .mode-btn.active .sub{ color:#C9BFA0; }
+
+  .chip-input-row{ display:flex; gap:8px; }
+  .chip-input-row input{ flex:1; }
+  .chip-input-row button{
+    width:44px; border-radius:8px; border:1.5px solid var(--paper-line); background:var(--amber);
+    color:var(--charcoal); font-size:18px; font-weight:700; cursor:pointer;
+  }
+  .chips{ display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+  .chip{
+    padding:6px 10px 6px 13px; border-radius:20px; border:1.5px solid var(--paper-line); font-size:13px;
+    cursor:pointer; background:#fff; color:var(--ink); display:inline-flex; align-items:center; gap:6px; user-select:none;
+  }
+  .chip.selected{ background:var(--amber); border-color:var(--amber-dark); color:var(--charcoal); font-weight:700; }
+  .chip .chip-x{ opacity:.55; font-size:12px; }
+  .chip.selected .chip-x{ opacity:.7; }
+  .chip.static{ cursor:default; }
+
+  .alloc-box{ background:#fff; border:1.5px solid var(--paper-line); border-radius:10px; padding:10px 12px; margin-top:10px; }
+  .alloc-row{ display:flex; align-items:center; justify-content:space-between; padding:6px 0; font-size:13.5px; gap:10px; }
+  .alloc-row .aname{ flex:1; overflow-wrap:anywhere; }
+  .alloc-row input{
+    width:54px; text-align:center; padding:6px 4px; border:1.5px solid var(--paper-line); border-radius:6px;
+    font-family:'JetBrains Mono',monospace; font-size:14px;
+  }
+  .alloc-hint{ font-size:12px; margin-top:8px; font-weight:600; }
+  .alloc-hint.ok{ color:var(--teal); }
+  .alloc-hint.warn{ color:var(--wine); }
+
+  .breakdown-person{ margin-bottom:20px; }
+  .breakdown-person h4{
+    font-family:'Bebas Neue',sans-serif; font-size:21px; margin:0 0 6px; letter-spacing:1px;
+    border-bottom:1px dashed var(--paper-line); padding-bottom:4px;
+  }
+  .breakdown-line{ display:flex; justify-content:space-between; gap:10px; font-size:13px; padding:3px 0; color:var(--ink-soft); }
+  .breakdown-line span:first-child{ overflow-wrap:anywhere; }
+  .breakdown-line span:last-child{ font-family:'JetBrains Mono',monospace; white-space:nowrap; }
+  .breakdown-total{
+    display:flex; justify-content:space-between; font-weight:700; font-size:15.5px;
+    border-top:1.5px dashed var(--paper-line); margin-top:6px; padding-top:6px; font-family:'JetBrains Mono',monospace;
+  }
+  .breakdown-empty{ font-size:12px; color:var(--ink-soft); font-style:italic; }
+
+  ::selection{ background:var(--amber); color:var(--charcoal); }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <h1>RONDA</h1>
+  <p>cuentas de bar · entre amigos</p>
+</header>
+
+<main>
+  <div class="grand-total">
+    <div>
+      <div class="label">Total de la noche</div>
+      <div class="barcode"></div>
+    </div>
+    <div class="amount" id="grandTotal">0.00€</div>
+  </div>
+
+  <div id="groupsWrap"></div>
+
+  <div class="empty-state" id="emptyState" style="display:none">
+    <div class="glyph">🍺</div>
+    <div><b>Aún no hay rondas.</b></div>
+    <div>Toca el botón + para abrir la primera.</div>
+  </div>
+</main>
+
+<button class="fab" id="openAddGroup" aria-label="Añadir grupo">+</button>
+
+<!-- Modal grupo -->
+<div class="overlay" id="groupOverlay">
+  <div class="sheet">
+    <h3 id="groupSheetTitle">Nueva cuenta</h3>
+
+    <div class="mode-toggle">
+      <button type="button" class="mode-btn active" id="modeSoloBtn" data-mode="solitario">
+        En solitario
+        <span class="sub">solo tú, sin repartos</span>
+      </button>
+      <button type="button" class="mode-btn" id="modeRondaBtn" data-mode="ronda">
+        En ronda 🍻
+        <span class="sub">con la cuadrilla</span>
+      </button>
+    </div>
+
+    <div class="field">
+      <label for="groupName">Nombre</label>
+      <input id="groupName" type="text" placeholder="Ej. Terraza de Manolo" maxlength="40">
+    </div>
+    <div class="field">
+      <label for="groupSub">Subnombre</label>
+      <input id="groupSub" type="text" placeholder="Ej. sábado noche" maxlength="50">
+    </div>
+
+    <div class="field" id="membersSection" style="display:none">
+      <label>Los compinches</label>
+      <div class="chip-input-row">
+        <input id="memberNameInput" type="text" placeholder="Nombre y toca +" maxlength="24">
+        <button type="button" id="addMemberBtn">+</button>
+      </div>
+      <div class="chips" id="membersChips"></div>
+      <div class="hint" style="margin-top:8px">Necesitas al menos un compinche para guardar en modo ronda.</div>
+    </div>
+
+    <div class="sheet-actions">
+      <button class="btn ghost" id="cancelGroup">Cancelar</button>
+      <button class="btn primary" id="saveGroup">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal item -->
+<div class="overlay" id="itemOverlay">
+  <div class="sheet">
+    <h3 id="itemSheetTitle">Nuevo ítem</h3>
+    <div class="field">
+      <label for="itemTitle">Título</label>
+      <input id="itemTitle" type="text" placeholder="Ej. Cerveza" maxlength="40">
+    </div>
+    <div class="field">
+      <label for="itemSub">Subtítulo</label>
+      <input id="itemSub" type="text" placeholder="Ej. mediana, con limón" maxlength="50">
+    </div>
+    <div class="field price-field">
+      <label for="itemPrice">Precio por unidad</label>
+      <input id="itemPrice" type="number" inputmode="decimal" step="0.01" min="0" max="99.99" placeholder="0.00">
+    </div>
+    <div class="hint">Máximo 99,99 € (dos dígitos y dos decimales)</div>
+
+    <div id="rondaItemFields" style="display:none">
+      <div class="field">
+        <label for="itemQtyRonda">Cantidad total</label>
+        <input id="itemQtyRonda" type="number" inputmode="numeric" min="1" max="999" value="1">
+      </div>
+      <div class="field">
+        <label>¿Quién se lo bebe? <button type="button" id="allMembersBtn" class="btn ghost" style="flex:none;padding:5px 12px;font-size:11px;margin-left:6px">Todos</button></label>
+        <div class="chips" id="itemMemberChips"></div>
+      </div>
+      <div class="alloc-box" id="allocBox" style="display:none">
+        <div id="allocRows"></div>
+        <div class="alloc-hint" id="allocHint"></div>
+      </div>
+    </div>
+
+    <div class="sheet-actions">
+      <button class="btn ghost" id="cancelItem">Cancelar</button>
+      <button class="btn primary" id="saveItem">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal ronda rápida -->
+<div class="overlay" id="quickRoundOverlay">
+  <div class="sheet">
+    <div class="sheet-header-row">
+      <h3 id="quickRoundTitle">Otra ronda</h3>
+      <button class="icon-btn" id="closeQuickRoundX" aria-label="Cerrar">✕</button>
+    </div>
+    <div class="field">
+      <label>¿Quién repite? <button type="button" id="quickAllMembersBtn" class="btn ghost" style="flex:none;padding:5px 12px;font-size:11px;margin-left:6px">Todos</button></label>
+      <div class="chips" id="quickRoundChips"></div>
+    </div>
+    <div class="field" style="max-width:160px">
+      <label for="quickRoundEach">Unidades cada uno</label>
+      <div style="display:flex;align-items:center;gap:10px">
+        <button type="button" class="qty-btn" id="quickEachDec">−</button>
+        <input id="quickRoundEach" type="number" min="1" value="1" style="text-align:center">
+        <button type="button" class="qty-btn" id="quickEachInc">+</button>
+      </div>
+    </div>
+    <div class="sheet-actions">
+      <button class="btn ghost" id="cancelQuickRound">Cancelar</button>
+      <button class="btn primary" id="confirmQuickRound">Añadir ronda</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal reparto -->
+<div class="overlay" id="breakdownOverlay">
+  <div class="sheet">
+    <div class="sheet-header-row">
+      <h3>¿Cuánto por cabeza?</h3>
+      <button class="icon-btn" id="closeBreakdownX" aria-label="Cerrar">✕</button>
+    </div>
+    <div id="breakdownContent"></div>
+    <div class="sheet-actions">
+      <button class="btn primary" id="shareBreakdown">📤 Enviar copia</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const STORAGE_KEY = 'ronda_data_v1';
+
+function loadData(){
+  let data;
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    data = raw ? JSON.parse(raw) : { groups: [] };
+  }catch(e){ data = { groups: [] }; }
+  // migración: asegurar campos nuevos en datos antiguos
+  data.groups.forEach(g=>{
+    if(!g.mode) g.mode = 'solitario';
+    if(!g.members) g.members = [];
+    g.items.forEach(it=>{
+      if(!it.qty) it.qty = 1;
+      if(g.mode === 'ronda' && !it.assignments){
+        it.assignments = new Array(it.qty).fill(null);
+      }
+    });
+  });
+  return data;
+}
+function saveData(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+
+let state = loadData();
+let editingGroupId = null;
+let editingItemCtx = null;
+let draftMembers = [];        // compinches mientras el modal de grupo está abierto
+let draftMode = 'solitario';
+let itemSelectedMembers = new Set();  // ids seleccionados en el modal de ítem
+let itemUnitCounts = {};              // { memberId: unidades } en el modal de ítem
+
+function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+function fmt(n){ return n.toFixed(2).replace('.', ',') + '€'; }
+function groupTotal(g){ return g.items.reduce((s,it)=> s + it.price * (it.qty || 1), 0); }
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function memberName(g, id){
+  const m = g.members.find(x=>x.id===id);
+  return m ? m.name : null;
+}
+
+function render(){
+  const wrap = document.getElementById('groupsWrap');
+  const empty = document.getElementById('emptyState');
+  wrap.innerHTML = '';
+
+  empty.style.display = state.groups.length === 0 ? 'block' : 'none';
+
+  let grand = 0;
+
+  state.groups.forEach(g=>{
+    const total = groupTotal(g);
+    grand += total;
+    const isRonda = g.mode === 'ronda';
+
+    const ticket = document.createElement('div');
+    ticket.className = 'ticket';
+
+    const itemsHtml = g.items.map(it => {
+      const qty = it.qty || 1;
+      if(isRonda){
+        const counts = {};
+        (it.assignments || []).forEach(mid=>{
+          const key = mid || '__unassigned__';
+          counts[key] = (counts[key]||0)+1;
+        });
+        const parts = Object.keys(counts).map(k=>{
+          const label = k === '__unassigned__' ? 'sin asignar' : (memberName(g,k) || '¿?');
+          return `${escapeHtml(label)} ×${counts[k]}`;
+        });
+        return `
+          <div class="item-row">
+            <div class="item-main">
+              <div class="item-title-line">
+                <span class="item-title">${escapeHtml(it.title)}</span>
+                <span class="leader"></span>
+                <span class="item-price">${fmt(it.price * qty)}</span>
+              </div>
+              ${it.subtitle ? `<div class="item-sub">${escapeHtml(it.subtitle)}</div>` : ''}
+              <div class="assign-summary">${parts.join(' · ')} · ${fmt(it.price)}/u</div>
+            </div>
+            <div class="item-actions-col">
+              <button class="quick-round-btn" data-action="quick-round" data-gid="${g.id}" data-iid="${it.id}" aria-label="Otra ronda de este ítem">🔁</button>
+              <button class="item-del" data-action="del-item" data-gid="${g.id}" data-iid="${it.id}" aria-label="Eliminar ítem">✕</button>
+            </div>
+          </div>`;
+      } else {
+        return `
+          <div class="item-row">
+            <div class="item-main">
+              <div class="item-title-line">
+                <span class="item-title">${escapeHtml(it.title)}</span>
+                <span class="leader"></span>
+                <span class="item-price">${fmt(it.price * qty)}</span>
+              </div>
+              ${it.subtitle ? `<div class="item-sub">${escapeHtml(it.subtitle)}</div>` : ''}
+              <div class="qty-stepper">
+                <button class="qty-btn" data-action="qty-dec" data-gid="${g.id}" data-iid="${it.id}" ${qty<=1?'disabled':''} aria-label="Quitar unidad">−</button>
+                <span class="qty-value">${qty}</span>
+                <button class="qty-btn" data-action="qty-inc" data-gid="${g.id}" data-iid="${it.id}" aria-label="Añadir unidad">+</button>
+                <span class="unit-price">× ${fmt(it.price)}/u</span>
+              </div>
+            </div>
+            <button class="item-del" data-action="del-item" data-gid="${g.id}" data-iid="${it.id}" aria-label="Eliminar ítem">✕</button>
+          </div>`;
+      }
+    }).join('');
+
+    ticket.innerHTML = `
+      <div class="ticket-head">
+        <div class="names">
+          <h2>${escapeHtml(g.name)}${isRonda ? '<span class="mode-pill">Ronda</span>' : ''}</h2>
+          <div class="sub">${escapeHtml(g.subname || '')}</div>
+        </div>
+        <div class="ticket-actions">
+          <button class="icon-btn" data-action="edit-group" data-id="${g.id}" aria-label="Editar grupo">✎</button>
+          <button class="icon-btn danger" data-action="del-group" data-id="${g.id}" aria-label="Eliminar grupo">✕</button>
+        </div>
+      </div>
+      <div class="items">${itemsHtml}</div>
+      <button class="add-item-btn" data-action="add-item" data-gid="${g.id}">+ Añadir ítem</button>
+      ${isRonda ? `<button class="split-btn" data-action="split" data-gid="${g.id}">¿Cuánto por cabeza?</button>` : ''}
+      <div class="ticket-total">
+        <div class="t-label">Total ronda</div>
+        <div class="t-amount">${fmt(total)}</div>
+      </div>
+    `;
+
+    ticket.querySelectorAll('.item-row').forEach((row, idx)=>{
+      row.addEventListener('click', (e)=>{
+        if(e.target.closest('[data-action]')) return;
+        openItemModal(g.id, g.items[idx].id);
+      });
+    });
+
+    wrap.appendChild(ticket);
+  });
+
+  document.getElementById('grandTotal').textContent = fmt(grand);
+}
+
+// ---- Delegación de eventos sobre las tickets ----
+document.getElementById('groupsWrap').addEventListener('click', (e)=>{
+  const btn = e.target.closest('[data-action]');
+  if(!btn) return;
+  const action = btn.dataset.action;
+
+  if(action === 'edit-group'){
+    openGroupModal(btn.dataset.id);
+  } else if(action === 'del-group'){
+    const g = state.groups.find(x=>x.id===btn.dataset.id);
+    if(g && confirm(`¿Eliminar "${g.name}" y sus ${g.items.length} ítems?`)){
+      state.groups = state.groups.filter(x=>x.id!==btn.dataset.id);
+      saveData(); render();
+    }
+  } else if(action === 'add-item'){
+    openItemModal(btn.dataset.gid, null);
+  } else if(action === 'qty-inc' || action === 'qty-dec'){
+    const g = state.groups.find(x=>x.id===btn.dataset.gid);
+    const it = g && g.items.find(x=>x.id===btn.dataset.iid);
+    if(it){
+      it.qty = (it.qty || 1) + (action === 'qty-inc' ? 1 : -1);
+      if(it.qty < 1) it.qty = 1;
+      saveData(); render();
+    }
+  } else if(action === 'del-item'){
+    const g = state.groups.find(x=>x.id===btn.dataset.gid);
+    if(g){
+      const it = g.items.find(x=>x.id===btn.dataset.iid);
+      if(it && confirm(`¿Eliminar "${it.title}"?`)){
+        g.items = g.items.filter(x=>x.id!==btn.dataset.iid);
+        saveData(); render();
+      }
+    }
+  } else if(action === 'split'){
+    openBreakdown(btn.dataset.gid);
+  } else if(action === 'quick-round'){
+    openQuickRound(btn.dataset.gid, btn.dataset.iid);
+  }
+});
+
+// ==================== MODAL GRUPO ====================
+const groupOverlay = document.getElementById('groupOverlay');
+const modeSoloBtn = document.getElementById('modeSoloBtn');
+const modeRondaBtn = document.getElementById('modeRondaBtn');
+const membersSection = document.getElementById('membersSection');
+const membersChips = document.getElementById('membersChips');
+const memberNameInput = document.getElementById('memberNameInput');
+
+document.getElementById('openAddGroup').addEventListener('click', ()=> openGroupModal(null));
+document.getElementById('cancelGroup').addEventListener('click', closeGroupModal);
+groupOverlay.addEventListener('click', (e)=>{ if(e.target === groupOverlay) closeGroupModal(); });
+
+function setDraftMode(mode){
+  draftMode = mode;
+  modeSoloBtn.classList.toggle('active', mode==='solitario');
+  modeRondaBtn.classList.toggle('active', mode==='ronda');
+  membersSection.style.display = mode==='ronda' ? 'block' : 'none';
+}
+modeSoloBtn.addEventListener('click', ()=> setDraftMode('solitario'));
+modeRondaBtn.addEventListener('click', ()=> setDraftMode('ronda'));
+
+function renderMemberChips(){
+  membersChips.innerHTML = draftMembers.map(m => `
+    <span class="chip selected" data-mid="${m.id}">${escapeHtml(m.name)} <span class="chip-x" data-remove-member="${m.id}">✕</span></span>
+  `).join('');
+  membersChips.querySelectorAll('[data-remove-member]').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      draftMembers = draftMembers.filter(m => m.id !== el.dataset.removeMember);
+      renderMemberChips();
+    });
+  });
+}
+function addDraftMember(){
+  const name = memberNameInput.value.trim();
+  if(!name) return;
+  draftMembers.push({ id: uid(), name });
+  memberNameInput.value = '';
+  renderMemberChips();
+  memberNameInput.focus();
+}
+document.getElementById('addMemberBtn').addEventListener('click', addDraftMember);
+memberNameInput.addEventListener('keydown', (e)=>{ if(e.key === 'Enter'){ e.preventDefault(); addDraftMember(); } });
+
+function openGroupModal(id){
+  editingGroupId = id;
+  const title = document.getElementById('groupSheetTitle');
+  const nameEl = document.getElementById('groupName');
+  const subEl = document.getElementById('groupSub');
+
+  if(id){
+    const g = state.groups.find(x=>x.id===id);
+    title.textContent = 'Editar cuenta';
+    nameEl.value = g.name;
+    subEl.value = g.subname || '';
+    setDraftMode(g.mode || 'solitario');
+    draftMembers = (g.members || []).map(m => ({ ...m }));
+  } else {
+    title.textContent = 'Nueva cuenta';
+    nameEl.value = ''; subEl.value = '';
+    setDraftMode('solitario');
+    draftMembers = [];
+  }
+  renderMemberChips();
+  groupOverlay.classList.add('open');
+  setTimeout(()=>nameEl.focus(), 250);
+}
+function closeGroupModal(){ groupOverlay.classList.remove('open'); }
+
+document.getElementById('saveGroup').addEventListener('click', ()=>{
+  const name = document.getElementById('groupName').value.trim();
+  const subname = document.getElementById('groupSub').value.trim();
+  if(!name){ document.getElementById('groupName').focus(); return; }
+  if(draftMode === 'ronda' && draftMembers.length === 0){
+    alert('Añade al menos un compinche para guardar en modo ronda.');
+    memberNameInput.focus();
+    return;
+  }
+
+  if(editingGroupId){
+    const g = state.groups.find(x=>x.id===editingGroupId);
+    const wasRonda = g.mode === 'ronda';
+    g.name = name; g.subname = subname;
+
+    if(draftMode === 'solitario'){
+      if(wasRonda && (g.members.length || g.items.some(it=>it.assignments))){
+        if(!confirm('Cambiar a "en solitario" borrará los compinches y los repartos por ítem. ¿Seguro?')) return;
+      }
+      g.mode = 'solitario';
+      g.members = [];
+      g.items.forEach(it => { delete it.assignments; });
+    } else {
+      // sigue o pasa a ser ronda
+      if(wasRonda){
+        const removedIds = g.members.filter(om => !draftMembers.some(dm=>dm.id===om.id)).map(m=>m.id);
+        if(removedIds.length){
+          g.items.forEach(it=>{
+            if(it.assignments){
+              it.assignments = it.assignments.map(mid => removedIds.includes(mid) ? null : mid);
+            }
+          });
+        }
+      } else {
+        g.items.forEach(it=>{ it.assignments = new Array(it.qty || 1).fill(null); });
+      }
+      g.mode = 'ronda';
+      g.members = draftMembers.map(m => ({ ...m }));
+    }
+  } else {
+    const newGroup = { id: uid(), name, subname, mode: draftMode, members: draftMode==='ronda' ? draftMembers.map(m=>({...m})) : [], items: [] };
+    state.groups.push(newGroup);
+  }
+  saveData(); render(); closeGroupModal();
+});
+
+// ==================== MODAL ÍTEM ====================
+const itemOverlay = document.getElementById('itemOverlay');
+const rondaItemFields = document.getElementById('rondaItemFields');
+const itemMemberChips = document.getElementById('itemMemberChips');
+const allocBox = document.getElementById('allocBox');
+const allocRows = document.getElementById('allocRows');
+const allocHint = document.getElementById('allocHint');
+const itemQtyRonda = document.getElementById('itemQtyRonda');
+
+document.getElementById('cancelItem').addEventListener('click', closeItemModal);
+itemOverlay.addEventListener('click', (e)=>{ if(e.target === itemOverlay) closeItemModal(); });
+
+function autoDistribute(qty, ids){
+  const n = ids.length;
+  itemUnitCounts = {};
+  if(n === 0) return;
+  const base = Math.floor(qty / n);
+  let rem = qty % n;
+  ids.forEach(id=>{
+    itemUnitCounts[id] = base + (rem > 0 ? 1 : 0);
+    if(rem > 0) rem--;
+  });
+}
+
+function renderItemMemberChips(g){
+  itemMemberChips.innerHTML = g.members.map(m => `
+    <span class="chip ${itemSelectedMembers.has(m.id) ? 'selected' : ''}" data-mid="${m.id}">${escapeHtml(m.name)}</span>
+  `).join('');
+  itemMemberChips.querySelectorAll('.chip').forEach(chip=>{
+    chip.addEventListener('click', ()=>{
+      const mid = chip.dataset.mid;
+      if(itemSelectedMembers.has(mid)) itemSelectedMembers.delete(mid);
+      else itemSelectedMembers.add(mid);
+      autoDistribute(parseInt(itemQtyRonda.value)||1, Array.from(itemSelectedMembers));
+      renderItemMemberChips(g);
+      renderAllocRows(g);
+    });
+  });
+}
+
+function renderAllocRows(g){
+  const ids = Array.from(itemSelectedMembers);
+  if(ids.length === 0){ allocBox.style.display = 'none'; return; }
+  allocBox.style.display = 'block';
+  allocRows.innerHTML = ids.map(id => `
+    <div class="alloc-row">
+      <span class="aname">${escapeHtml(memberName(g,id) || '¿?')}</span>
+      <input type="number" min="0" inputmode="numeric" data-alloc="${id}" value="${itemUnitCounts[id]||0}">
+    </div>
+  `).join('');
+  allocRows.querySelectorAll('[data-alloc]').forEach(inp=>{
+    inp.addEventListener('input', ()=>{
+      itemUnitCounts[inp.dataset.alloc] = parseInt(inp.value)||0;
+      updateAllocHint();
+    });
+  });
+  updateAllocHint();
+}
+function updateAllocHint(){
+  const qty = parseInt(itemQtyRonda.value)||0;
+  const sum = Object.values(itemUnitCounts).reduce((s,v)=>s+v,0);
+  if(sum === qty){
+    allocHint.textContent = `Asignadas ${sum} de ${qty} ✓`;
+    allocHint.className = 'alloc-hint ok';
+  } else {
+    allocHint.textContent = `Asignadas ${sum} de ${qty} — deben sumar el total`;
+    allocHint.className = 'alloc-hint warn';
+  }
+}
+document.getElementById('allMembersBtn').addEventListener('click', ()=>{
+  const g = state.groups.find(x=>x.id===editingItemCtx.groupId);
+  itemSelectedMembers = new Set(g.members.map(m=>m.id));
+  autoDistribute(parseInt(itemQtyRonda.value)||1, Array.from(itemSelectedMembers));
+  renderItemMemberChips(g);
+  renderAllocRows(g);
+});
+itemQtyRonda.addEventListener('input', ()=>{
+  const g = state.groups.find(x=>x.id===editingItemCtx.groupId);
+  autoDistribute(parseInt(itemQtyRonda.value)||1, Array.from(itemSelectedMembers));
+  renderAllocRows(g);
+});
+
+function openItemModal(groupId, itemId){
+  editingItemCtx = { groupId, itemId };
+  const g = state.groups.find(x=>x.id===groupId);
+  const isRonda = g.mode === 'ronda';
+  const title = document.getElementById('itemSheetTitle');
+  const titleEl = document.getElementById('itemTitle');
+  const subEl = document.getElementById('itemSub');
+  const priceEl = document.getElementById('itemPrice');
+
+  rondaItemFields.style.display = isRonda ? 'block' : 'none';
+
+  if(itemId){
+    const it = g.items.find(x=>x.id===itemId);
+    title.textContent = 'Editar ítem';
+    titleEl.value = it.title;
+    subEl.value = it.subtitle || '';
+    priceEl.value = it.price.toFixed(2);
+    if(isRonda){
+      itemQtyRonda.value = it.qty || 1;
+      itemUnitCounts = {};
+      (it.assignments||[]).forEach(mid=>{ if(mid) itemUnitCounts[mid] = (itemUnitCounts[mid]||0)+1; });
+      itemSelectedMembers = new Set(Object.keys(itemUnitCounts));
+    }
+  } else {
+    title.textContent = 'Nuevo ítem';
+    titleEl.value = ''; subEl.value = ''; priceEl.value = '';
+    if(isRonda){
+      itemQtyRonda.value = 1;
+      itemSelectedMembers = new Set();
+      itemUnitCounts = {};
+    }
+  }
+  if(isRonda){
+    renderItemMemberChips(g);
+    renderAllocRows(g);
+  }
+  itemOverlay.classList.add('open');
+  setTimeout(()=>titleEl.focus(), 250);
+}
+function closeItemModal(){ itemOverlay.classList.remove('open'); }
+
+document.getElementById('saveItem').addEventListener('click', ()=>{
+  const titleEl = document.getElementById('itemTitle');
+  const subEl = document.getElementById('itemSub');
+  const priceEl = document.getElementById('itemPrice');
+
+  const t = titleEl.value.trim();
+  let price = parseFloat(priceEl.value);
+  if(!t){ titleEl.focus(); return; }
+  if(isNaN(price) || price < 0){ priceEl.focus(); return; }
+  if(price > 99.99) price = 99.99;
+  price = Math.round(price * 100) / 100;
+
+  const { groupId, itemId } = editingItemCtx;
+  const g = state.groups.find(x=>x.id===groupId);
+  const isRonda = g.mode === 'ronda';
+
+  let qty = 1, assignments = null;
+  if(isRonda){
+    qty = parseInt(itemQtyRonda.value) || 1;
+    if(qty < 1) qty = 1;
+    const sum = Object.values(itemUnitCounts).reduce((s,v)=>s+v,0);
+    if(sum !== qty){
+      alert(`Las unidades asignadas (${sum}) deben sumar el total (${qty}).`);
+      return;
+    }
+    assignments = [];
+    Object.keys(itemUnitCounts).forEach(mid=>{
+      for(let i=0;i<itemUnitCounts[mid];i++) assignments.push(mid);
+    });
+  }
+
+  if(itemId){
+    const it = g.items.find(x=>x.id===itemId);
+    it.title = t; it.subtitle = subEl.value.trim(); it.price = price;
+    if(isRonda){ it.qty = qty; it.assignments = assignments; }
+  } else {
+    const newItem = { id: uid(), title: t, subtitle: subEl.value.trim(), price, qty: isRonda ? qty : 1 };
+    if(isRonda) newItem.assignments = assignments;
+    g.items.push(newItem);
+  }
+  saveData(); render(); closeItemModal();
+});
+
+// ==================== RONDA RÁPIDA (🔁) ====================
+const quickRoundOverlay = document.getElementById('quickRoundOverlay');
+const quickRoundChips = document.getElementById('quickRoundChips');
+const quickRoundEach = document.getElementById('quickRoundEach');
+let quickRoundCtx = null; // {groupId, itemId}
+let quickSelectedMembers = new Set();
+
+function renderQuickChips(g){
+  quickRoundChips.innerHTML = g.members.map(m => `
+    <span class="chip ${quickSelectedMembers.has(m.id) ? 'selected' : ''}" data-mid="${m.id}">${escapeHtml(m.name)}</span>
+  `).join('');
+  quickRoundChips.querySelectorAll('.chip').forEach(chip=>{
+    chip.addEventListener('click', ()=>{
+      const mid = chip.dataset.mid;
+      if(quickSelectedMembers.has(mid)) quickSelectedMembers.delete(mid);
+      else quickSelectedMembers.add(mid);
+      renderQuickChips(g);
+    });
+  });
+}
+
+function openQuickRound(groupId, itemId){
+  const g = state.groups.find(x=>x.id===groupId);
+  const it = g.items.find(x=>x.id===itemId);
+  quickRoundCtx = { groupId, itemId };
+  document.getElementById('quickRoundTitle').textContent = `Otra ronda de ${it.title}`;
+  // premarca a quien ya bebía este ítem, para no tener que volver a tocarlos
+  quickSelectedMembers = new Set((it.assignments || []).filter(Boolean));
+  quickRoundEach.value = 1;
+  renderQuickChips(g);
+  quickRoundOverlay.classList.add('open');
+}
+function closeQuickRound(){ quickRoundOverlay.classList.remove('open'); }
+
+document.getElementById('closeQuickRoundX').addEventListener('click', closeQuickRound);
+document.getElementById('cancelQuickRound').addEventListener('click', closeQuickRound);
+quickRoundOverlay.addEventListener('click', (e)=>{ if(e.target === quickRoundOverlay) closeQuickRound(); });
+
+document.getElementById('quickAllMembersBtn').addEventListener('click', ()=>{
+  const g = state.groups.find(x=>x.id===quickRoundCtx.groupId);
+  quickSelectedMembers = new Set(g.members.map(m=>m.id));
+  renderQuickChips(g);
+});
+document.getElementById('quickEachDec').addEventListener('click', ()=>{
+  quickRoundEach.value = Math.max(1, (parseInt(quickRoundEach.value)||1) - 1);
+});
+document.getElementById('quickEachInc').addEventListener('click', ()=>{
+  quickRoundEach.value = (parseInt(quickRoundEach.value)||1) + 1;
+});
+
+document.getElementById('confirmQuickRound').addEventListener('click', ()=>{
+  if(quickSelectedMembers.size === 0){
+    alert('Toca al menos a un compinche.');
+    return;
+  }
+  const g = state.groups.find(x=>x.id===quickRoundCtx.groupId);
+  const it = g.items.find(x=>x.id===quickRoundCtx.itemId);
+  const each = Math.max(1, parseInt(quickRoundEach.value)||1);
+  if(!it.assignments) it.assignments = new Array(it.qty || 0).fill(null);
+  quickSelectedMembers.forEach(mid=>{
+    for(let i=0;i<each;i++) it.assignments.push(mid);
+  });
+  it.qty = it.assignments.length;
+  saveData(); render(); closeQuickRound();
+});
+
+// ==================== REPARTO "¿Cuánto por cabeza?" ====================
+const breakdownOverlay = document.getElementById('breakdownOverlay');
+let currentBreakdownText = '';
+document.getElementById('closeBreakdownX').addEventListener('click', ()=> breakdownOverlay.classList.remove('open'));
+breakdownOverlay.addEventListener('click', (e)=>{ if(e.target === breakdownOverlay) breakdownOverlay.classList.remove('open'); });
+
+async function shareBreakdownText(){
+  const text = currentBreakdownText || '';
+  if(navigator.share){
+    try{ await navigator.share({ title: 'RONDA — ¿Cuánto por cabeza?', text }); }
+    catch(e){ /* usuario canceló, no hacemos nada */ }
+  } else if(navigator.clipboard && navigator.clipboard.writeText){
+    try{ await navigator.clipboard.writeText(text); alert('Copiado al portapapeles 📋'); }
+    catch(e){ alert('No se pudo copiar automáticamente. Copia el texto a mano.'); }
+  } else {
+    alert(text);
+  }
+}
+document.getElementById('shareBreakdown').addEventListener('click', shareBreakdownText);
+
+function openBreakdown(groupId){
+  const g = state.groups.find(x=>x.id===groupId);
+  const perPerson = {};
+  g.members.forEach(m => perPerson[m.id] = { name: m.name, total: 0, lines: [] });
+  let unassignedTotal = 0;
+  const unassignedLines = [];
+
+  g.items.forEach(it=>{
+    const counts = {};
+    (it.assignments||[]).forEach(mid=>{
+      const key = mid || '__unassigned__';
+      counts[key] = (counts[key]||0)+1;
+    });
+    Object.keys(counts).forEach(key=>{
+      const n = counts[key];
+      const cost = n * it.price;
+      if(key === '__unassigned__'){
+        unassignedTotal += cost;
+        unassignedLines.push({ title: it.title, n, cost });
+      } else if(perPerson[key]){
+        perPerson[key].total += cost;
+        perPerson[key].lines.push({ title: it.title, n, cost });
+      }
+    });
+  });
+
+  const content = document.getElementById('breakdownContent');
+  let html = '';
+  let text = `${g.name}${g.subname ? ' · ' + g.subname : ''} — ¿Cuánto por cabeza?\n\n`;
+
+  g.members.forEach(m=>{
+    const p = perPerson[m.id];
+    html += `<div class="breakdown-person"><h4>${escapeHtml(p.name)}</h4>`;
+    text += `${p.name}\n`;
+    if(p.lines.length === 0){
+      html += `<div class="breakdown-empty">No le toca nada... esta vez.</div>`;
+      text += `  (nada por aquí)\n`;
+    } else {
+      p.lines.forEach(l=>{
+        html += `<div class="breakdown-line"><span>${escapeHtml(l.title)} ×${l.n}</span><span>${fmt(l.cost)}</span></div>`;
+        text += `  ${l.title} ×${l.n}  ${fmt(l.cost)}\n`;
+      });
+    }
+    html += `<div class="breakdown-total"><span>Total</span><span>${fmt(p.total)}</span></div></div>`;
+    text += `  Total: ${fmt(p.total)}\n\n`;
+  });
+  if(unassignedLines.length){
+    html += `<div class="breakdown-person"><h4>Sin asignar</h4>`;
+    text += `Sin asignar\n`;
+    unassignedLines.forEach(l=>{
+      html += `<div class="breakdown-line"><span>${escapeHtml(l.title)} ×${l.n}</span><span>${fmt(l.cost)}</span></div>`;
+      text += `  ${l.title} ×${l.n}  ${fmt(l.cost)}\n`;
+    });
+    html += `<div class="breakdown-total"><span>Total</span><span>${fmt(unassignedTotal)}</span></div></div>`;
+    text += `  Total: ${fmt(unassignedTotal)}\n\n`;
+  }
+  content.innerHTML = html;
+  currentBreakdownText = text.trim();
+  breakdownOverlay.classList.add('open');
+}
+
+render();
+
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('sw.js').catch(()=>{});
+  });
+}
+</script>
+</body>
+</html>
